@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProdFlow.DTOs;
 using ProdFlow.Models.Entities;
 using ProdFlow.Models.Responses;
 
@@ -20,10 +21,11 @@ namespace ProdFlow.Data
 
         // Gallia-related
         public DbSet<Gallia> Gallias { get; set; }
-        // public DbSet<ProductGallia> ProductGallias { get; set; }
+        public DbSet<ProductGallia> ProductGallias { get; set; }
 
-        // Shared
+        // For stored procedure results
         public DbSet<StoredProcedureResult> StoredProcedureResults { get; set; }
+        public virtual DbSet<ProductGalliaAssociationDto> ProductGalliaAssociations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,7 +36,9 @@ namespace ProdFlow.Data
             modelBuilder.Entity<Produit>(entity =>
             {
                 entity.HasKey(e => e.PtNum);
-                entity.Property(e => e.PtNum).HasColumnName("pt_num");
+                entity.Property(e => e.PtNum)
+                    .HasColumnName("pt_num")
+                    .HasMaxLength(18);
             });
 
             // Synoptique config
@@ -79,16 +83,11 @@ namespace ProdFlow.Data
             {
                 entity.HasKey(g => g.GalliaId);
 
-                entity.Property(g => g.PLIB1)
-                    .HasMaxLength(50);
+                entity.Property(g => g.PLIB1).HasMaxLength(50);
+                entity.Property(g => g.QLIB3).HasMaxLength(50);
 
-                entity.Property(g => g.QLIB3)
-                    .HasMaxLength(50);
-
-                entity.Property(g => g.LIB1)
-                    .HasMaxLength(100);
-
-                // Repeat for LIB2-LIB7
+                // LIB fields
+                entity.Property(g => g.LIB1).HasMaxLength(100);
                 entity.Property(g => g.LIB2).HasMaxLength(100);
                 entity.Property(g => g.LIB3).HasMaxLength(100);
                 entity.Property(g => g.LIB4).HasMaxLength(100);
@@ -96,55 +95,47 @@ namespace ProdFlow.Data
                 entity.Property(g => g.LIB6).HasMaxLength(100);
                 entity.Property(g => g.LIB7).HasMaxLength(100);
 
-                entity.Property(g => g.SupplierName)
-                    .HasMaxLength(100);
-
-                entity.Property(g => g.CreatedAt)
-                    .HasDefaultValueSql("GETDATE()");
+                entity.Property(g => g.SupplierName).HasMaxLength(100);
+                entity.Property(g => g.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 
-            // ProductGallia config (commented out)
-            /*
+            // ProductGallia config
             modelBuilder.Entity<ProductGallia>(entity =>
             {
                 entity.HasKey(pg => pg.ProductGalliaId);
 
-                // Relationship with Gallia
-                entity.HasOne<Gallia>()
+                entity.HasOne(pg => pg.Gallia)
                     .WithMany()
                     .HasForeignKey(pg => pg.GalliaId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Relationship with Produit
-                entity.HasOne<Produit>()
+                entity.HasOne(pg => pg.Produit)
                     .WithMany()
                     .HasForeignKey(pg => pg.Pt_Num)
                     .HasPrincipalKey(p => p.PtNum)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Column configurations
-                entity.Property(pg => pg.Pt_Num)
-                    .HasMaxLength(18);
-
-                entity.Property(pg => pg.ProductName)
-                    .HasMaxLength(100);
-
-                entity.Property(pg => pg.SupplierReference)
-                    .HasMaxLength(100);
-
-                entity.Property(pg => pg.LabelNumber)
-                    .HasMaxLength(100);
-
-                entity.Property(pg => pg.Description)
-                    .HasMaxLength(255);
-
-                entity.Property(pg => pg.SupplierName)
-                    .HasMaxLength(100);
-
-                entity.Property(pg => pg.CreatedAt)
-                    .HasDefaultValueSql("GETDATE()");
+                entity.Property(pg => pg.Pt_Num).HasMaxLength(18);
+                entity.Property(pg => pg.ProductName).HasMaxLength(100);
+                entity.Property(pg => pg.SupplierReference).HasMaxLength(100);
+                entity.Property(pg => pg.LabelNumber).HasMaxLength(100);
+                entity.Property(pg => pg.Description).HasMaxLength(255);
+                entity.Property(pg => pg.SupplierName).HasMaxLength(100);
+                entity.Property(pg => pg.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
-            */
+
+            // Stored procedure DTO config
+            modelBuilder.Entity<ProductGalliaAssociationDto>(entity =>
+            {
+                entity.HasNoKey();
+                entity.Property(e => e.Pt_Num).HasMaxLength(18);
+                entity.Property(e => e.ProductName).HasMaxLength(100);
+                entity.Property(e => e.SupplierReference).HasMaxLength(100);
+                entity.Property(e => e.LabelNumber).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(255);
+                entity.Property(e => e.SupplierName).HasMaxLength(100);
+                entity.Property(e => e.LIB1).HasMaxLength(100);
+            });
         }
     }
 }

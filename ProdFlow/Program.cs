@@ -32,6 +32,7 @@ builder.Services.AddScoped<IJustificationService, JustificationService>();
 builder.Services.AddScoped<ISynoptiqueService, SynoptiqueService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IGalliaService, GalliaService>();
+builder.Services.AddScoped<IProductGalliaService, ProductGalliaService>();
 //builder.Services.AddScoped<IProfileService, ProfileService>();
 // Add other service registrations here as needed
 // builder.Services.AddScoped<IMyOtherService, MyOtherService>();
