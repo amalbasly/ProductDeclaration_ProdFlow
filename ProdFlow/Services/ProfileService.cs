@@ -1,5 +1,5 @@
-﻿/*// Services/ProfileService.cs
-using Microsoft.AspNetCore.Http;
+﻿// Services/ProfileService.cs
+/*using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using ProdFlow.Services.Interfaces;
 using System.Data;
@@ -41,8 +41,8 @@ namespace ProdFlow.Services
             command.Parameters.AddWithValue("@pl_matric", pl_matric);
             command.Parameters.AddWithValue("@pl_nom", string.IsNullOrEmpty(pl_nom) ? DBNull.Value : (object)pl_nom);
             command.Parameters.AddWithValue("@pl_prenom", string.IsNullOrEmpty(pl_prenom) ? DBNull.Value : (object)pl_prenom);
-            command.Parameters.AddWithValue("@img", string.IsNullOrEmpty(base64Image) ? DBNull.Value : (object)base64Image);
-
+            command.Parameters.Add("@img", SqlDbType.NVarChar, -1).Value =
+                string.IsNullOrEmpty(base64Image) ? DBNull.Value : (object)base64Image;
             var returnParam = new SqlParameter("@ReturnVal", SqlDbType.Int)
             {
                 Direction = ParameterDirection.ReturnValue

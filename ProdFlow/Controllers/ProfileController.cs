@@ -30,6 +30,12 @@ namespace ProdFlow.Controllers
         {
             try
             {
+                // Validate image size before processing
+                if (img?.Length > 4 * 1024 * 1024) // 4MB limit
+                {
+                    return BadRequest("Image size exceeds 4MB");
+                }
+
                 var rowsAffected = await _profileService.UpdateProfileAsync(
                     pl_matric, pl_nom, pl_prenom, img);
 
@@ -37,15 +43,20 @@ namespace ProdFlow.Controllers
                     ? Ok("Profile updated successfully")
                     : NotFound("Employee not found");
             }
+            catch (SqlException ex) when (ex.Number == 8152) // Truncation error
+            {
+                _logger.LogError(ex, "Image data too large");
+                return BadRequest("Image data is too large");
+            }
             catch (SqlException ex)
             {
-                _logger.LogError(ex, "Database error while updating profile");
-                return StatusCode(500, "Database operation failed");
+                _logger.LogError(ex, "Database error");
+                return StatusCode(500, "Database error");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while updating profile");
-                return StatusCode(500, "An unexpected error occurred");
+                _logger.LogError(ex, "Unexpected error");
+                return StatusCode(500, "Server error");
             }
         }
     }
