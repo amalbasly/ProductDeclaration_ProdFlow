@@ -1,48 +1,52 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
-using System.Collections.Generic;
-
-namespace ProdFlow.Models.Responses
+﻿public class ApiResponse<T>
 {
-    public class ApiResponse
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    public T Data { get; set; }
+    public List<string> Errors { get; set; } = new List<string>();
+
+    public static ApiResponse<T> SuccessResponse(T data, string message = null)
     {
-        public bool Success { get; set; }
-        public string Message { get; set; }
-        public Dictionary<string, List<string>> Errors { get; set; }
-
-        public ApiResponse(bool success, string message)
+        return new ApiResponse<T>
         {
-            Success = success;
-            Message = message;
-        }
-
-        public ApiResponse(bool success, string message, ModelStateDictionary modelState)
-        {
-            Success = success;
-            Message = message;
-            Errors = new Dictionary<string, List<string>>();
-
-            foreach (var key in modelState.Keys)
-            {
-                var state = modelState[key];
-                if (state.Errors.Count > 0)
-                {
-                    Errors[key] = new List<string>();
-                    foreach (var error in state.Errors)
-                    {
-                        Errors[key].Add(error.ErrorMessage);
-                    }
-                }
-            }
-        }
+            Success = true,
+            Data = data,
+            Message = message ?? "Operation completed successfully"
+        };
     }
 
-    public class ApiResponse<T> : ApiResponse
+    public static ApiResponse<T> ErrorResponse(string errorMessage, List<string> errors = null, T data = default)
     {
-        public T Data { get; set; }
-
-        public ApiResponse(bool success, string message, T data) : base(success, message)
+        return new ApiResponse<T>
         {
-            Data = data;
-        }
+            Success = false,
+            Message = errorMessage,
+            Errors = errors ?? new List<string>(),
+            Data = data
+        };
+    }
+}
+
+public class ApiResponse : ApiResponse<object>
+{
+    public static new ApiResponse SuccessResponse(object data = null, string message = null)
+    {
+        return new ApiResponse
+        {
+            Success = true,
+            Data = data,
+            Message = message ?? "Operation completed successfully"
+        };
+    }
+
+    public static new ApiResponse ErrorResponse(string errorMessage, List<string> errors = null, object data = null)
+    {
+        return new ApiResponse
+        {
+            Success = false,
+            Message = errorMessage,
+            Errors = errors ?? new List<string>(),
+            Data = data
+        };
     }
 }

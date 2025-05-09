@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProdFlow.Data;
 using ProdFlow.Services;
-using ProdFlow.Services.Interfaces; // Add this namespace
+using ProdFlow.Services.Interfaces; 
 using System;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +33,8 @@ builder.Services.AddScoped<ISynoptiqueService, SynoptiqueService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IGalliaService, GalliaService>();
 builder.Services.AddScoped<IProductGalliaService, ProductGalliaService>();
+builder.Services.AddScoped<IClientReferenceService, ClientReferenceService>();
+
 //builder.Services.AddScoped<IProfileService, ProfileService>();
 // Add other service registrations here as needed
 // builder.Services.AddScoped<IMyOtherService, MyOtherService>();

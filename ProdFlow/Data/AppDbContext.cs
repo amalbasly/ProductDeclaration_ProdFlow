@@ -136,6 +136,26 @@ namespace ProdFlow.Data
                 entity.Property(e => e.SupplierName).HasMaxLength(100);
                 entity.Property(e => e.LIB1).HasMaxLength(100);
             });
+            modelBuilder.Entity<ClientReferenceData>(entity =>
+            {
+                entity.HasKey(e => new { e.ClientReference, e.PtNum }); // Composite key if needed
+
+                entity.Property(e => e.ClientReference)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.ClientIndex)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Client)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Referentiel)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.PtNum)
+                    .HasMaxLength(18)
+                    .HasColumnName("pt_num");
+            });
         }
     }
 }
