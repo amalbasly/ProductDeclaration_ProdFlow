@@ -125,5 +125,49 @@ namespace ProdFlow.Controllers
                 });
             }
         }
+        [HttpPut("update_synoptique")]
+        [ProducesResponseType(typeof(SynoptiqueUpdateResult), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> UpdateSynoptiqueEntry(
+            [FromBody, Required] SynoptiqueUpdateRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid model state for synoptique update");
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var result = await _synoptiqueService.UpdateSynoptiqueEntryAsync(request);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Failed to update synoptique entry for product {ProductCode}: {Message}",
+                        request.PtNum, result.Message);
+
+                    if (result.Message.Contains("non trouvé"))
+                        return NotFound(result);
+
+                    return BadRequest(result);
+                }
+
+                _logger.LogInformation("Successfully updated synoptique entry for product {ProductCode}", request.PtNum);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating synoptique entry for product {ProductCode}", request.PtNum);
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "Error updating synoptique entry",
+                    ProductCode = request.PtNum,
+                    Error = ex.Message
+                });
+            }
+        }
     }
 }

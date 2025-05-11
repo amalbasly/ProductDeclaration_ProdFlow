@@ -286,5 +286,71 @@ namespace ProdFlow.Services
             var ordinal = reader.GetOrdinal(columnName);
             return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
         }
+        public async Task<ProductResult> UpdateProductAsync(ProduitSerialiséDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.PtNum))
+            {
+                return new ProductResult
+                {
+                    Result = "Error",
+                    Message = "Product code is required",
+                    ProductCode = dto.PtNum
+                };
+            }
+
+            try
+            {
+                using var connection = (SqlConnection)_context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                using var command = new SqlCommand("sp_produit_update", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                // Add all parameters with null checks
+                command.Parameters.Add(new SqlParameter("@pt_num", SqlDbType.VarChar, 18) { Value = dto.PtNum });
+                command.Parameters.Add(new SqlParameter("@pt_lib", SqlDbType.NVarChar, 96) { Value = dto.PtLib ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_lib2", SqlDbType.NVarChar, 96) { Value = dto.PtLib2 ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@lp_num", SqlDbType.VarChar, 2) { Value = dto.LpNum ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@fp_cod", SqlDbType.VarChar, 10) { Value = dto.FpCod ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@sp_cod", SqlDbType.VarChar, 25) { Value = dto.SpCod ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@tp_cod", SqlDbType.VarChar, 10) { Value = dto.TpCod ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@sp_Id", SqlDbType.VarChar, 6) { Value = dto.SpId ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_specifT14", SqlDbType.VarChar, 50) { Value = dto.PtSpecifT14 ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_poids", SqlDbType.Float) { Value = dto.PtPoids ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_createur", SqlDbType.VarChar, 12) { Value = dto.PtCreateur ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_specifT15", SqlDbType.VarChar, 50) { Value = dto.PtSpecifT15 ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@pt_flasher", SqlDbType.TinyInt) { Value = dto.PtFlasher ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@is_serialized", SqlDbType.Bit) { Value = dto.IsSerialized });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return new ProductResult
+                    {
+                        Result = reader["Result"]?.ToString() ?? "Error",
+                        Message = reader["Message"]?.ToString() ?? "Unknown error",
+                        ProductCode = reader["ProductCode"]?.ToString() ?? dto.PtNum
+                    };
+                }
+
+                return new ProductResult
+                {
+                    Result = "Error",
+                    Message = "No results returned from stored procedure",
+                    ProductCode = dto.PtNum
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ProductResult
+                {
+                    Result = "Error",
+                    Message = $"Exception during product update: {ex.Message}",
+                    ProductCode = dto.PtNum
+                };
+            }
+        }
     }
 }

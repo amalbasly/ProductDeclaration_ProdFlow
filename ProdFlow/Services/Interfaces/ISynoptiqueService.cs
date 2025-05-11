@@ -14,6 +14,7 @@ namespace ProdFlow.Services.Interfaces
         Task<IEnumerable<ModeDto>> GetAllModesAsync();
         Task<IEnumerable<SynoptiqueEntryDto>> GetSynoptiqueForProductAsync(string ptNum);
         Task<SynoptiqueSaveResult> SaveSynoptiqueAsync(SynoptiqueSaveRequest request);
+        Task<SynoptiqueUpdateResult> UpdateSynoptiqueEntryAsync(SynoptiqueUpdateRequest request);
     }
 
 }
