@@ -82,20 +82,6 @@ namespace ProdFlow.Data
             modelBuilder.Entity<Gallia>(entity =>
             {
                 entity.HasKey(g => g.GalliaId);
-
-                entity.Property(g => g.PLIB1).HasMaxLength(50);
-                entity.Property(g => g.QLIB3).HasMaxLength(50);
-
-                // LIB fields
-                entity.Property(g => g.LIB1).HasMaxLength(100);
-                entity.Property(g => g.LIB2).HasMaxLength(100);
-                entity.Property(g => g.LIB3).HasMaxLength(100);
-                entity.Property(g => g.LIB4).HasMaxLength(100);
-                entity.Property(g => g.LIB5).HasMaxLength(100);
-                entity.Property(g => g.LIB6).HasMaxLength(100);
-                entity.Property(g => g.LIB7).HasMaxLength(100);
-
-                entity.Property(g => g.SupplierName).HasMaxLength(100);
                 entity.Property(g => g.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 

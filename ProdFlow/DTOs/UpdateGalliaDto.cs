@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
 
 namespace ProdFlow.DTOs
 {
-    public class UpdateGalliaDto : CreateGalliaDto
+    public class UpdateGalliaDto
     {
-        [Required]
         public int GalliaId { get; set; }
+        public DateTime? LabelDate { get; set; }
+        public List<CreateGalliaFieldDto> Fields { get; set; } = new List<CreateGalliaFieldDto>();
     }
 }

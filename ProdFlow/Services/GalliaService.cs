@@ -7,7 +7,6 @@ using ProdFlow.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace ProdFlow.Services
@@ -25,93 +24,110 @@ namespace ProdFlow.Services
 
         public async Task<IEnumerable<GalliaDto>> GetAllGalliasAsync()
         {
-            try
-            {
-                var connectionString = _context.Database.GetDbConnection().ConnectionString;
-                using (var connection = new SqlConnection(connectionString))
-                {
-                    await connection.OpenAsync();
-                    using (var command = new SqlCommand("sp_gallia_get_all", connection))
-                    {
-                        command.CommandType = CommandType.StoredProcedure;
+            var gallias = new List<GalliaDto>();
 
-                        var gallias = new List<Gallia>();
-                        using (var reader = await command.ExecuteReaderAsync())
+            var connectionString = _context.Database.GetDbConnection().ConnectionString;
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = new SqlCommand("sp_gallia_get_all", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
                         {
-                            while (await reader.ReadAsync())
+                            gallias.Add(new GalliaDto
                             {
-                                gallias.Add(new Gallia
+                                GalliaId = reader.GetInt32(reader.GetOrdinal("GalliaId")),
+                                LabelDate = reader.IsDBNull(reader.GetOrdinal("LabelDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("LabelDate")),
+                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+                            });
+                        }
+                    }
+                }
+
+                foreach (var gallia in gallias)
+                {
+                    using (var fieldCmd = new SqlCommand("SELECT * FROM GalliaField WHERE GalliaId = @GalliaId ORDER BY DisplayOrder", connection))
+                    {
+                        fieldCmd.Parameters.AddWithValue("@GalliaId", gallia.GalliaId);
+                        using (var fieldReader = await fieldCmd.ExecuteReaderAsync())
+                        {
+                            while (await fieldReader.ReadAsync())
+                            {
+                                gallia.Fields.Add(new GalliaFieldDto
                                 {
-                                    GalliaId = reader.GetInt32(reader.GetOrdinal("GalliaId")),
-                                    PLIB1 = reader.IsDBNull(reader.GetOrdinal("PLIB1")) ? null : reader.GetString(reader.GetOrdinal("PLIB1")),
-                                    QLIB3 = reader.IsDBNull(reader.GetOrdinal("QLIB3")) ? null : reader.GetString(reader.GetOrdinal("QLIB3")),
-                                    LIB1 = reader.IsDBNull(reader.GetOrdinal("LIB1")) ? null : reader.GetString(reader.GetOrdinal("LIB1")),
-                                    LIB2 = reader.IsDBNull(reader.GetOrdinal("LIB2")) ? null : reader.GetString(reader.GetOrdinal("LIB2")),
-                                    LIB3 = reader.IsDBNull(reader.GetOrdinal("LIB3")) ? null : reader.GetString(reader.GetOrdinal("LIB3")),
-                                    LIB4 = reader.IsDBNull(reader.GetOrdinal("LIB4")) ? null : reader.GetString(reader.GetOrdinal("LIB4")),
-                                    LIB5 = reader.IsDBNull(reader.GetOrdinal("LIB5")) ? null : reader.GetString(reader.GetOrdinal("LIB5")),
-                                    LIB6 = reader.IsDBNull(reader.GetOrdinal("LIB6")) ? null : reader.GetString(reader.GetOrdinal("LIB6")),
-                                    LIB7 = reader.IsDBNull(reader.GetOrdinal("LIB7")) ? null : reader.GetString(reader.GetOrdinal("LIB7")),
-                                    SupplierName = reader.IsDBNull(reader.GetOrdinal("SupplierName")) ? null : reader.GetString(reader.GetOrdinal("SupplierName")),
-                                    LabelDate = reader.IsDBNull(reader.GetOrdinal("LabelDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("LabelDate")),
-                                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+                                    GalliaFieldId = fieldReader.GetInt32(fieldReader.GetOrdinal("GalliaFieldId")),
+                                    GalliaId = fieldReader.GetInt32(fieldReader.GetOrdinal("GalliaId")),
+                                    FieldValue = fieldReader.GetString(fieldReader.GetOrdinal("FieldValue")),
+                                    DisplayOrder = fieldReader.GetInt32(fieldReader.GetOrdinal("DisplayOrder")),
+                                    VisualizationType = fieldReader.GetString(fieldReader.GetOrdinal("VisualizationType"))
                                 });
                             }
                         }
-                        return gallias.Select(MapToDto);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving all gallias");
-                throw;
-            }
+
+            return gallias;
         }
 
         public async Task<GalliaDto> GetGalliaByIdAsync(int id)
         {
-            try
+            var connectionString = _context.Database.GetDbConnection().ConnectionString;
+            using (var connection = new SqlConnection(connectionString))
             {
-                var connectionString = _context.Database.GetDbConnection().ConnectionString;
-                using (var connection = new SqlConnection(connectionString))
-                {
-                    await connection.OpenAsync();
-                    using (var command = new SqlCommand("sp_gallia_get_by_id", connection))
-                    {
-                        command.CommandType = CommandType.StoredProcedure;
-                        command.Parameters.Add(new SqlParameter("@GalliaId", id));
+                await connection.OpenAsync();
 
-                        using (var reader = await command.ExecuteReaderAsync())
+                GalliaDto galliaDto = null;
+
+                using (var command = new SqlCommand("sp_gallia_get_by_id", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@GalliaId", id);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
                         {
-                            if (await reader.ReadAsync())
+                            galliaDto = new GalliaDto
                             {
-                                return new GalliaDto
+                                GalliaId = reader.GetInt32(reader.GetOrdinal("GalliaId")),
+                                LabelDate = reader.IsDBNull(reader.GetOrdinal("LabelDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("LabelDate")),
+                                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                                Fields = new List<GalliaFieldDto>()
+                            };
+                        }
+                    }
+
+                    if (galliaDto == null) return null;
+
+                    // Load fields
+                    using (var fieldCmd = new SqlCommand("SELECT * FROM GalliaField WHERE GalliaId = @GalliaId ORDER BY DisplayOrder", connection))
+                    {
+                        fieldCmd.Parameters.AddWithValue("@GalliaId", id);
+                        using (var fieldReader = await fieldCmd.ExecuteReaderAsync())
+                        {
+                            while (await fieldReader.ReadAsync())
+                            {
+                                galliaDto.Fields.Add(new GalliaFieldDto
                                 {
-                                    GalliaId = reader.GetInt32(reader.GetOrdinal("GalliaId")),
-                                    PLIB1 = reader.IsDBNull(reader.GetOrdinal("PLIB1")) ? null : reader.GetString(reader.GetOrdinal("PLIB1")),
-                                    QLIB3 = reader.IsDBNull(reader.GetOrdinal("QLIB3")) ? null : reader.GetString(reader.GetOrdinal("QLIB3")),
-                                    LIB1 = reader.IsDBNull(reader.GetOrdinal("LIB1")) ? null : reader.GetString(reader.GetOrdinal("LIB1")),
-                                    LIB2 = reader.IsDBNull(reader.GetOrdinal("LIB2")) ? null : reader.GetString(reader.GetOrdinal("LIB2")),
-                                    LIB3 = reader.IsDBNull(reader.GetOrdinal("LIB3")) ? null : reader.GetString(reader.GetOrdinal("LIB3")),
-                                    LIB4 = reader.IsDBNull(reader.GetOrdinal("LIB4")) ? null : reader.GetString(reader.GetOrdinal("LIB4")),
-                                    LIB5 = reader.IsDBNull(reader.GetOrdinal("LIB5")) ? null : reader.GetString(reader.GetOrdinal("LIB5")),
-                                    LIB6 = reader.IsDBNull(reader.GetOrdinal("LIB6")) ? null : reader.GetString(reader.GetOrdinal("LIB6")),
-                                    LIB7 = reader.IsDBNull(reader.GetOrdinal("LIB7")) ? null : reader.GetString(reader.GetOrdinal("LIB7")),
-                                    SupplierName = reader.IsDBNull(reader.GetOrdinal("SupplierName")) ? null : reader.GetString(reader.GetOrdinal("SupplierName")),
-                                    LabelDate = reader.IsDBNull(reader.GetOrdinal("LabelDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("LabelDate")),
-                                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
-                                };
+                                    GalliaFieldId = fieldReader.GetInt32(fieldReader.GetOrdinal("GalliaFieldId")),
+                                    GalliaId = fieldReader.GetInt32(fieldReader.GetOrdinal("GalliaId")),
+                                    FieldName = fieldReader.IsDBNull(fieldReader.GetOrdinal("FieldName")) ? null : fieldReader.GetString(fieldReader.GetOrdinal("FieldName")),
+                                    FieldValue = fieldReader.GetString(fieldReader.GetOrdinal("FieldValue")),
+                                    DisplayOrder = fieldReader.GetInt32(fieldReader.GetOrdinal("DisplayOrder")),
+                                    VisualizationType = fieldReader.GetString(fieldReader.GetOrdinal("VisualizationType"))
+                                });
                             }
                         }
                     }
                 }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error retrieving gallia with ID {id}");
-                throw;
+
+                return galliaDto;
             }
         }
 
@@ -123,53 +139,39 @@ namespace ProdFlow.Services
                 using (var connection = new SqlConnection(connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("sp_gallia_insert", connection))
+
+                    int galliaId;
+
+                    // Step 1: Insert into Gallia
+                    using (var cmdInsert = new SqlCommand("sp_gallia_insert", connection))
                     {
-                        command.CommandType = CommandType.StoredProcedure;
+                        cmdInsert.CommandType = CommandType.StoredProcedure;
+                        cmdInsert.Parameters.AddWithValue("@LabelDate", (object?)createDto.LabelDate ?? DBNull.Value);
 
-                        command.Parameters.Add(new SqlParameter("@PLIB1", createDto.PLIB1 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@QLIB3", createDto.QLIB3 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB1", createDto.LIB1 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB2", createDto.LIB2 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB3", createDto.LIB3 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB4", createDto.LIB4 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB5", createDto.LIB5 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB6", createDto.LIB6 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB7", createDto.LIB7 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@SupplierName", createDto.SupplierName ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LabelDate", createDto.LabelDate ?? (object)DBNull.Value));
-
-                        await command.ExecuteNonQueryAsync();
+                        galliaId = Convert.ToInt32(await cmdInsert.ExecuteScalarAsync());
                     }
 
-                    // Get the newly created Gallia
-                    using (var command = new SqlCommand("SELECT TOP 1 * FROM Gallia ORDER BY GalliaId DESC", connection))
+                    // Step 2: Insert dynamic fields
+                    if (createDto.Fields != null && createDto.Fields.Count > 0)
                     {
-                        using (var reader = await command.ExecuteReaderAsync())
+                        foreach (var field in createDto.Fields)
                         {
-                            if (await reader.ReadAsync())
+                            using (var cmdField = new SqlCommand("sp_galliafield_insert", connection))
                             {
-                                return new GalliaDto
-                                {
-                                    GalliaId = reader.GetInt32(reader.GetOrdinal("GalliaId")),
-                                    PLIB1 = reader.IsDBNull(reader.GetOrdinal("PLIB1")) ? null : reader.GetString(reader.GetOrdinal("PLIB1")),
-                                    QLIB3 = reader.IsDBNull(reader.GetOrdinal("QLIB3")) ? null : reader.GetString(reader.GetOrdinal("QLIB3")),
-                                    LIB1 = reader.IsDBNull(reader.GetOrdinal("LIB1")) ? null : reader.GetString(reader.GetOrdinal("LIB1")),
-                                    LIB2 = reader.IsDBNull(reader.GetOrdinal("LIB2")) ? null : reader.GetString(reader.GetOrdinal("LIB2")),
-                                    LIB3 = reader.IsDBNull(reader.GetOrdinal("LIB3")) ? null : reader.GetString(reader.GetOrdinal("LIB3")),
-                                    LIB4 = reader.IsDBNull(reader.GetOrdinal("LIB4")) ? null : reader.GetString(reader.GetOrdinal("LIB4")),
-                                    LIB5 = reader.IsDBNull(reader.GetOrdinal("LIB5")) ? null : reader.GetString(reader.GetOrdinal("LIB5")),
-                                    LIB6 = reader.IsDBNull(reader.GetOrdinal("LIB6")) ? null : reader.GetString(reader.GetOrdinal("LIB6")),
-                                    LIB7 = reader.IsDBNull(reader.GetOrdinal("LIB7")) ? null : reader.GetString(reader.GetOrdinal("LIB7")),
-                                    SupplierName = reader.IsDBNull(reader.GetOrdinal("SupplierName")) ? null : reader.GetString(reader.GetOrdinal("SupplierName")),
-                                    LabelDate = reader.IsDBNull(reader.GetOrdinal("LabelDate")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("LabelDate")),
-                                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
-                                };
+                                cmdField.CommandType = CommandType.StoredProcedure;
+                                cmdField.Parameters.AddWithValue("@GalliaId", galliaId);
+                                cmdField.Parameters.AddWithValue("@FieldValue", field.FieldValue ?? "");
+                                cmdField.Parameters.AddWithValue("@DisplayOrder", field.DisplayOrder);
+                                cmdField.Parameters.AddWithValue("@VisualizationType", field.VisualizationType ?? "qrcode");
+                                cmdField.Parameters.AddWithValue("@FieldName", (object?)field.FieldName ?? DBNull.Value);
+
+                                await cmdField.ExecuteNonQueryAsync();
                             }
                         }
                     }
+
+                    return await GetGalliaByIdAsync(galliaId);
                 }
-                throw new Exception("Failed to retrieve newly created Gallia");
             }
             catch (Exception ex)
             {
@@ -186,34 +188,47 @@ namespace ProdFlow.Services
                 using (var connection = new SqlConnection(connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("sp_gallia_update", connection))
+
+                    // Step 1: Update main Gallia record
+                    using (var cmdUpdate = new SqlCommand("sp_gallia_update", connection))
                     {
-                        command.CommandType = CommandType.StoredProcedure;
+                        cmdUpdate.CommandType = CommandType.StoredProcedure;
+                        cmdUpdate.Parameters.AddWithValue("@GalliaId", updateDto.GalliaId);
+                        cmdUpdate.Parameters.AddWithValue("@LabelDate", (object?)updateDto.LabelDate ?? DBNull.Value);
 
-                        command.Parameters.Add(new SqlParameter("@GalliaId", updateDto.GalliaId));
-                        command.Parameters.Add(new SqlParameter("@PLIB1", updateDto.PLIB1 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@QLIB3", updateDto.QLIB3 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB1", updateDto.LIB1 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB2", updateDto.LIB2 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB3", updateDto.LIB3 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB4", updateDto.LIB4 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB5", updateDto.LIB5 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB6", updateDto.LIB6 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LIB7", updateDto.LIB7 ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@SupplierName", updateDto.SupplierName ?? (object)DBNull.Value));
-                        command.Parameters.Add(new SqlParameter("@LabelDate", updateDto.LabelDate ?? (object)DBNull.Value));
+                        await cmdUpdate.ExecuteNonQueryAsync();
+                    }
 
-                        var rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
+                    // Step 2: Delete old fields
+                    using (var deleteCmd = new SqlCommand("DELETE FROM GalliaField WHERE GalliaId = @GalliaId", connection))
+                    {
+                        deleteCmd.Parameters.AddWithValue("@GalliaId", updateDto.GalliaId);
+                        await deleteCmd.ExecuteNonQueryAsync();
+                    }
+
+                    // Step 3: Re-insert updated fields
+                    if (updateDto.Fields != null && updateDto.Fields.Count > 0)
+                    {
+                        foreach (var field in updateDto.Fields)
                         {
-                            throw new Exception($"No gallia found with ID {updateDto.GalliaId} to update");
+                            using (var cmdField = new SqlCommand("sp_galliafield_insert", connection))
+                            {
+                                cmdField.CommandType = CommandType.StoredProcedure;
+                                cmdField.Parameters.AddWithValue("@GalliaId", updateDto.GalliaId);
+                                cmdField.Parameters.AddWithValue("@FieldValue", field.FieldValue ?? "");
+                                cmdField.Parameters.AddWithValue("@DisplayOrder", field.DisplayOrder);
+                                cmdField.Parameters.AddWithValue("@VisualizationType", field.VisualizationType ?? "qrcode");
+                                cmdField.Parameters.AddWithValue("@FieldName", (object?)field.FieldName ?? DBNull.Value);
+
+                                await cmdField.ExecuteNonQueryAsync();
+                            }
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating gallia with ID {updateDto.GalliaId}");
+                _logger.LogError(ex, $"Error updating Gallia with ID {updateDto.GalliaId}");
                 throw;
             }
         }
@@ -226,44 +241,35 @@ namespace ProdFlow.Services
                 using (var connection = new SqlConnection(connectionString))
                 {
                     await connection.OpenAsync();
+
                     using (var command = new SqlCommand("sp_gallia_delete", connection))
                     {
-                        command.CommandType = CommandType.StoredProcedure;
-                        command.Parameters.Add(new SqlParameter("@GalliaId", id));
-
-                        var rowsAffected = await command.ExecuteNonQueryAsync();
-                        if (rowsAffected == 0)
-                        {
-                            throw new Exception($"No gallia found with ID {id} to delete");
-                        }
+                        command.Parameters.AddWithValue("@GalliaId", id);
+                        await command.ExecuteNonQueryAsync();
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error deleting gallia with ID {id}");
+                _logger.LogError(ex, $"Error deleting Gallia with ID {id}");
                 throw;
             }
         }
-
-        private static GalliaDto MapToDto(Gallia gallia)
+        public async Task SaveLabelImageAsync(int galliaId, string imagePath)
         {
-            return new GalliaDto
+            var connectionString = _context.Database.GetDbConnection().ConnectionString;
+            using (var connection = new SqlConnection(connectionString))
             {
-                GalliaId = gallia.GalliaId,
-                PLIB1 = gallia.PLIB1,
-                QLIB3 = gallia.QLIB3,
-                LIB1 = gallia.LIB1,
-                LIB2 = gallia.LIB2,
-                LIB3 = gallia.LIB3,
-                LIB4 = gallia.LIB4,
-                LIB5 = gallia.LIB5,
-                LIB6 = gallia.LIB6,
-                LIB7 = gallia.LIB7,
-                SupplierName = gallia.SupplierName,
-                LabelDate = gallia.LabelDate,
-                CreatedAt = gallia.CreatedAt
-            };
+                await connection.OpenAsync();
+                using (var command = new SqlCommand("sp_gallialabelimage_insert", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.Parameters.AddWithValue("@GalliaId", galliaId);
+                    command.Parameters.AddWithValue("@LabelImage", imagePath ?? (object)DBNull.Value);
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
         }
     }
 }

@@ -20,7 +20,11 @@ namespace ProdFlow.Controllers
             _logger = logger;
         }
 
-        [HttpGet("Get_Gallia")]
+        /// <summary>
+        /// Get all Gallias with associated fields
+        /// </summary>
+        [HttpGet]
+        [Route("GetAll")]
         public async Task<ActionResult<IEnumerable<GalliaDto>>> GetAll()
         {
             try
@@ -35,6 +39,9 @@ namespace ProdFlow.Controllers
             }
         }
 
+        /// <summary>
+        /// Get a specific Gallia by ID with its fields
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<GalliaDto>> GetById(int id)
         {
@@ -49,34 +56,26 @@ namespace ProdFlow.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while retrieving the gallia" });
+                _logger.LogError(ex, $"Error retrieving Gallia with ID {id}");
+                return StatusCode(500, new { message = "An error occurred while retrieving the Gallia" });
             }
         }
 
-        [HttpPost("Create_Gallia")]
+        /// <summary>
+        /// Create a new Gallia with multiple fields
+        /// </summary>
+        [HttpPost("Create")]
         public async Task<ActionResult<GalliaDto>> Create([FromBody] CreateGalliaDto createDto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new { message = "Invalid data", errors = ModelState });
-                }
-
-                var createdGallia = await _galliaService.CreateGalliaAsync(createDto);
-                return CreatedAtAction(nameof(GetById),
-                    new { id = createdGallia.GalliaId },
-                    createdGallia);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating gallia");
-                return StatusCode(500, new { message = "An error occurred while creating the gallia" });
-            }
+            var created = await _galliaService.CreateGalliaAsync(createDto);
+            return CreatedAtAction(nameof(GetById), new { id = created.GalliaId }, created);
         }
 
-        [HttpPut("{id}")]
+        /// <summary>
+        /// Update an existing Gallia including its fields
+        /// </summary>
+        [HttpPut]
+        [Route("Update/{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateGalliaDto updateDto)
         {
             try
@@ -96,12 +95,16 @@ namespace ProdFlow.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while updating the gallia" });
+                _logger.LogError(ex, $"Error updating Gallia with ID {id}");
+                return StatusCode(500, new { message = "An error occurred while updating the Gallia" });
             }
         }
 
-        [HttpDelete("Delete/{id}")]
+        /// <summary>
+        /// Delete a Gallia by ID
+        /// </summary>
+        [HttpDelete]
+        [Route("Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -111,9 +114,15 @@ namespace ProdFlow.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error deleting gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while deleting the gallia" });
+                _logger.LogError(ex, $"Error deleting Gallia with ID {id}");
+                return StatusCode(500, new { message = "An error occurred while deleting the Gallia" });
             }
+        }
+        [HttpPost("save-image")]
+        public async Task<IActionResult> SaveLabelImage([FromBody] LabelImageDto dto)
+        {
+            await _galliaService.SaveLabelImageAsync(dto.GalliaId, dto.Base64Image);
+            return Ok(new { message = "Image saved" });
         }
     }
 }

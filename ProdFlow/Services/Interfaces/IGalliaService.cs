@@ -1,6 +1,6 @@
-﻿using ProdFlow.DTOs;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using ProdFlow.DTOs;
 
 namespace ProdFlow.Services.Interfaces
 {
@@ -11,5 +11,6 @@ namespace ProdFlow.Services.Interfaces
         Task<GalliaDto> CreateGalliaAsync(CreateGalliaDto createDto);
         Task UpdateGalliaAsync(UpdateGalliaDto updateDto);
         Task DeleteGalliaAsync(int id);
+        Task SaveLabelImageAsync(int galliaId, string imagePath);
     }
 }
