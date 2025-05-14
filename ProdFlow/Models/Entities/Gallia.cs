@@ -8,6 +8,7 @@ namespace ProdFlow.Models.Entities
     {
         [Key]
         public int GalliaId { get; set; }
+        public string LabelName { get; set; } = "Gallia"; // Default to "Gallia"
         public DateTime? LabelDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

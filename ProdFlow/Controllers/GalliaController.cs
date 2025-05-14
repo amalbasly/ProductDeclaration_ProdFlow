@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace ProdFlow.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/[controller]/{labelType}")]
     public class GalliaController : ControllerBase
     {
         private readonly IGalliaService _galliaService;
@@ -21,62 +21,93 @@ namespace ProdFlow.Controllers
         }
 
         /// <summary>
-        /// Get all Gallias with associated fields
+        /// Get all entities of the specified type (Gallia or Etiquette) with associated fields
         /// </summary>
         [HttpGet]
         [Route("GetAll")]
-        public async Task<ActionResult<IEnumerable<GalliaDto>>> GetAll()
+        public async Task<ActionResult<IEnumerable<GalliaDto>>> GetAll(string labelType)
         {
             try
             {
-                var gallias = await _galliaService.GetAllGalliasAsync();
-                return Ok(gallias);
+                var items = await _galliaService.GetAllGalliasAsync(labelType);
+                return Ok(items);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving gallias");
-                return StatusCode(500, new { message = "An error occurred while retrieving gallias" });
+                _logger.LogError(ex, "Error retrieving {LabelType}s", labelType);
+                return StatusCode(500, new { message = $"An error occurred while retrieving {labelType}s" });
             }
         }
 
         /// <summary>
-        /// Get a specific Gallia by ID with its fields
+        /// Get a specific entity by ID with its fields
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<GalliaDto>> GetById(int id)
+        public async Task<ActionResult<GalliaDto>> GetById(int id, string labelType)
         {
             try
             {
-                var gallia = await _galliaService.GetGalliaByIdAsync(id);
-                if (gallia == null)
+                var item = await _galliaService.GetGalliaByIdAsync(id);
+
+                if (item == null || !string.Equals(item.LabelName, labelType, StringComparison.OrdinalIgnoreCase))
                 {
-                    return NotFound(new { message = $"Gallia with ID {id} not found" });
+                    return NotFound(new { message = $"{labelType} with ID {id} not found" });
                 }
-                return Ok(gallia);
+
+                return Ok(item);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error retrieving Gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while retrieving the Gallia" });
+                _logger.LogError(ex, $"Error retrieving {labelType} with ID {id}");
+                return StatusCode(500, new { message = $"An error occurred while retrieving the {labelType}" });
             }
         }
 
         /// <summary>
-        /// Create a new Gallia with multiple fields
+        /// Create a new entity with multiple fields
+        /// Default LabelName is set to the provided labelType
         /// </summary>
         [HttpPost("Create")]
-        public async Task<ActionResult<GalliaDto>> Create([FromBody] CreateGalliaDto createDto)
+        public async Task<ActionResult<GalliaDto>> Create(string labelType, [FromBody] CreateGalliaDto createDto)
         {
-            var created = await _galliaService.CreateGalliaAsync(createDto);
-            return CreatedAtAction(nameof(GetById), new { id = created.GalliaId }, created);
+            try
+            {
+                if (createDto == null)
+                {
+                    return BadRequest(new { message = "Request body cannot be empty" });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
+                }
+
+                // Enforce label type consistency
+                if (string.IsNullOrWhiteSpace(createDto.LabelName))
+                {
+                    createDto.LabelName = labelType;
+                }
+                else if (!string.Equals(createDto.LabelName, labelType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = $"LabelName must match '{labelType}' for this endpoint." });
+                }
+
+                var created = await _galliaService.CreateGalliaAsync(createDto);
+                return CreatedAtAction(nameof(GetById), new { id = created.GalliaId, labelType }, created);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating {LabelType}", labelType);
+                return StatusCode(500, new { message = $"An error occurred while creating the {labelType}" });
+            }
         }
 
         /// <summary>
-        /// Update an existing Gallia including its fields
+        /// Update an existing entity including its fields
         /// </summary>
         [HttpPut]
         [Route("Update/{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateGalliaDto updateDto)
+        public async Task<IActionResult> Update(int id, string labelType, [FromBody] UpdateGalliaDto updateDto)
         {
             try
             {
@@ -90,106 +121,100 @@ namespace ProdFlow.Controllers
                     return BadRequest(new { message = "Invalid data", errors = ModelState });
                 }
 
+                // Enforce label type consistency
+                if (string.IsNullOrWhiteSpace(updateDto.LabelName))
+                {
+                    updateDto.LabelName = labelType;
+                }
+                else if (!string.Equals(updateDto.LabelName, labelType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = $"LabelName must be '{labelType}' for this endpoint." });
+                }
+
                 await _galliaService.UpdateGalliaAsync(updateDto);
-                return Ok(new { message = "Gallia updated successfully" });
+                return Ok(new { message = $"{labelType} updated successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating Gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while updating the Gallia" });
+                _logger.LogError(ex, $"Error updating {labelType} with ID {id}");
+                return StatusCode(500, new { message = $"An error occurred while updating the {labelType}" });
             }
         }
 
         /// <summary>
-        /// Delete a Gallia by ID
+        /// Delete an entity by ID
         /// </summary>
         [HttpDelete]
         [Route("Delete/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, string labelType)
         {
             try
             {
-                // Call the service to delete Gallia
+                var existing = await _galliaService.GetGalliaByIdAsync(id);
+
+                if (existing == null || !string.Equals(existing.LabelName, labelType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return NotFound(new { message = $"{labelType} with ID {id} not found" });
+                }
+
                 var result = await _galliaService.DeleteGalliaAsync(id);
 
-                // Check if the delete was successful
                 if (result)
                 {
-                    return Ok(new { message = "Gallia deleted successfully" });
+                    return Ok(new { message = $"{labelType} deleted successfully" });
                 }
-                else
-                {
-                    // If no rows were affected, return not found
-                    return NotFound(new { message = $"Gallia with ID {id} not found" });
-                }
+
+                return NotFound(new { message = $"{labelType} with ID {id} not found" });
             }
             catch (Exception ex)
             {
-                // Log and return a general error message
-                _logger.LogError(ex, $"Error occurred while deleting Gallia with ID {id}");
-                return StatusCode(500, new { message = "An error occurred while deleting the Gallia" });
+                _logger.LogError(ex, $"Error deleting {labelType} with ID {id}");
+                return StatusCode(500, new { message = $"An error occurred while deleting the {labelType}" });
             }
         }
-        // GalliaController.cs
+
+        /// <summary>
+        /// Save base64 encoded image for an entity
+        /// </summary>
         [HttpPost("save-image")]
-        public async Task<IActionResult> SaveImage([FromBody] LabelImageDto dto)
+        public async Task<IActionResult> SaveImage(string labelType, [FromBody] LabelImageDto dto)
         {
             try
             {
-                // Validate input
-                if (dto == null)
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Base64Image))
                 {
-                    return BadRequest(new { message = "Request body cannot be empty" });
+                    return BadRequest(new { message = "Invalid image data" });
                 }
 
-                if (string.IsNullOrWhiteSpace(dto.Base64Image))
-                {
-                    return BadRequest(new { message = "Base64 image data cannot be empty" });
-                }
+                string cleanBase64 = CleanBase64String(dto.Base64Image);
 
-                // Clean base64 prefix
-                string cleanBase64;
                 try
                 {
-                    cleanBase64 = CleanBase64String(dto.Base64Image);
-
-                    // Test conversion to ensure it's valid base64
-                    var testBytes = Convert.FromBase64String(cleanBase64);
-                    if (testBytes.Length == 0)
-                    {
-                        return BadRequest(new { message = "Invalid image data (empty after conversion)" });
-                    }
+                    Convert.FromBase64String(cleanBase64); // Validate
                 }
                 catch (FormatException)
                 {
-                    return BadRequest(new { message = "Invalid base64 image format" });
+                    return BadRequest(new { message = "Invalid base64 format" });
                 }
 
-                // Save to database
                 await _galliaService.SaveLabelImageAsync(dto.GalliaId, cleanBase64);
 
-                // Save to disk if path provided
                 bool savedToDisk = false;
                 string diskError = null;
+
                 if (!string.IsNullOrWhiteSpace(dto.SavePath))
                 {
                     try
                     {
-                        var folderPath = dto.SavePath.Trim();
-
-                        // Remove any surrounding quotes
-                        folderPath = folderPath.Trim('"');
-
-                        // Create directory if needed
+                        var folderPath = dto.SavePath.Trim('"');
                         if (!System.IO.Directory.Exists(folderPath))
                         {
                             System.IO.Directory.CreateDirectory(folderPath);
                         }
 
-                        var fileName = $"Gallia_{dto.GalliaId}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+                        var fileName = $"{labelType}_{dto.GalliaId}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
                         var filePath = Path.Combine(folderPath, fileName);
 
-                        // Explicitly use System.IO.File to avoid ambiguity
                         await System.IO.File.WriteAllBytesAsync(filePath, Convert.FromBase64String(cleanBase64));
                         savedToDisk = true;
                     }
@@ -214,12 +239,8 @@ namespace ProdFlow.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving Gallia image");
-                return StatusCode(500, new
-                {
-                    message = "Internal server error",
-                    details = ex.Message
-                });
+                _logger.LogError(ex, "Error saving {LabelType} image", labelType);
+                return StatusCode(500, new { message = "Internal server error", details = ex.Message });
             }
         }
 
