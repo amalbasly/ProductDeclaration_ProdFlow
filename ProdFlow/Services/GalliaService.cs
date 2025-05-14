@@ -37,9 +37,9 @@ namespace ProdFlow.Services
                 await connection.OpenAsync();
 
                 string query = @"
-                    SELECT g.*, gi.LabelImage 
-                    FROM Gallia g
-                    LEFT JOIN GalliaImages gi ON g.GalliaId = gi.GalliaId";
+            SELECT g.*, gi.LabelImage 
+            FROM Gallia g
+            LEFT JOIN GalliaImages gi ON g.GalliaId = gi.GalliaId";
 
                 if (!string.IsNullOrEmpty(labelType))
                 {
@@ -67,6 +67,9 @@ namespace ProdFlow.Services
                                     (DateTime?)null :
                                     reader.GetDateTime(reader.GetOrdinal("LabelDate")),
                                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                                GalliaName = reader.IsDBNull(reader.GetOrdinal("GalliaName")) ?
+                                    null :
+                                    reader.GetString(reader.GetOrdinal("GalliaName")), // Add GalliaName
                                 LabelImage = reader.IsDBNull(reader.GetOrdinal("LabelImage")) ?
                                     null :
                                     reader.GetString(reader.GetOrdinal("LabelImage")),
@@ -135,6 +138,9 @@ namespace ProdFlow.Services
                                     (DateTime?)null :
                                     reader.GetDateTime(reader.GetOrdinal("LabelDate")),
                                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                                GalliaName = reader.IsDBNull(reader.GetOrdinal("GalliaName")) ?
+                                    null :
+                                    reader.GetString(reader.GetOrdinal("GalliaName")), // Add GalliaName
                                 LabelImage = reader.IsDBNull(reader.GetOrdinal("LabelImage")) ?
                                     null :
                                     reader.GetString(reader.GetOrdinal("LabelImage")),
@@ -180,6 +186,7 @@ namespace ProdFlow.Services
                     cmdInsert.CommandType = CommandType.StoredProcedure;
                     cmdInsert.Parameters.AddWithValue("@LabelName", createDto.LabelName ?? "Gallia");
                     cmdInsert.Parameters.AddWithValue("@LabelDate", (object?)createDto.LabelDate ?? DBNull.Value);
+                    cmdInsert.Parameters.AddWithValue("@GalliaName", (object?)createDto.GalliaName ?? DBNull.Value); // Add GalliaName
                     galliaId = Convert.ToInt32(await cmdInsert.ExecuteScalarAsync());
                 }
 
@@ -218,6 +225,7 @@ namespace ProdFlow.Services
                     cmdUpdate.Parameters.AddWithValue("@GalliaId", updateDto.GalliaId);
                     cmdUpdate.Parameters.AddWithValue("@LabelName", updateDto.LabelName ?? "Gallia");
                     cmdUpdate.Parameters.AddWithValue("@LabelDate", (object?)updateDto.LabelDate ?? DBNull.Value);
+                    cmdUpdate.Parameters.AddWithValue("@GalliaName", (object?)updateDto.GalliaName ?? DBNull.Value); // Add GalliaName
                     await cmdUpdate.ExecuteNonQueryAsync();
                 }
 

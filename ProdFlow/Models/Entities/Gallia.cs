@@ -11,6 +11,7 @@ namespace ProdFlow.Models.Entities
         public string LabelName { get; set; } = "Gallia"; // Default to "Gallia"
         public DateTime? LabelDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? GalliaName { get; set; }
 
         // Navigation property
         public ICollection<GalliaImage> Images { get; set; }
