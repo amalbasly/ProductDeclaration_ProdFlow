@@ -7,5 +7,6 @@
         public DateTime CreatedAt { get; set; }
 
         public List<GalliaFieldDto> Fields { get; set; } = new List<GalliaFieldDto>();
+        public string LabelImage { get; set; }
     }
 }

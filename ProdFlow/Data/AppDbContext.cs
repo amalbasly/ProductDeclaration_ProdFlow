@@ -142,6 +142,21 @@ namespace ProdFlow.Data
                     .HasMaxLength(18)
                     .HasColumnName("pt_num");
             });
+            modelBuilder.Entity<GalliaImage>(entity =>
+            {
+                entity.HasKey(gi => gi.GalliaImageId);
+
+                entity.Property(gi => gi.CreatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
+
+                entity.Property(gi => gi.UpdatedAt)
+                      .IsRequired(false);  // Make UpdatedAt optional
+
+                entity.HasOne(gi => gi.Gallia)
+                      .WithMany(g => g.Images)
+                      .HasForeignKey(gi => gi.GalliaId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

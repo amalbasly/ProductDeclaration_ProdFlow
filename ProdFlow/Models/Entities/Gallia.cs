@@ -8,8 +8,10 @@ namespace ProdFlow.Models.Entities
     {
         [Key]
         public int GalliaId { get; set; }
-
         public DateTime? LabelDate { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation property
+        public ICollection<GalliaImage> Images { get; set; }
     }
 }

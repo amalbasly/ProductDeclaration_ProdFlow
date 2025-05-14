@@ -10,7 +10,8 @@ namespace ProdFlow.Services.Interfaces
         Task<GalliaDto> GetGalliaByIdAsync(int id);
         Task<GalliaDto> CreateGalliaAsync(CreateGalliaDto createDto);
         Task UpdateGalliaAsync(UpdateGalliaDto updateDto);
-        Task DeleteGalliaAsync(int id);
-        Task SaveLabelImageAsync(int galliaId, string imagePath);
+        Task<bool> DeleteGalliaAsync(int id);
+        Task SaveLabelImageAsync(int galliaId, string base64Image);
+
     }
 }

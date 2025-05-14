@@ -109,20 +109,131 @@ namespace ProdFlow.Controllers
         {
             try
             {
-                await _galliaService.DeleteGalliaAsync(id);
-                return Ok(new { message = "Gallia deleted successfully" });
+                // Call the service to delete Gallia
+                var result = await _galliaService.DeleteGalliaAsync(id);
+
+                // Check if the delete was successful
+                if (result)
+                {
+                    return Ok(new { message = "Gallia deleted successfully" });
+                }
+                else
+                {
+                    // If no rows were affected, return not found
+                    return NotFound(new { message = $"Gallia with ID {id} not found" });
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error deleting Gallia with ID {id}");
+                // Log and return a general error message
+                _logger.LogError(ex, $"Error occurred while deleting Gallia with ID {id}");
                 return StatusCode(500, new { message = "An error occurred while deleting the Gallia" });
             }
         }
+        // GalliaController.cs
         [HttpPost("save-image")]
-        public async Task<IActionResult> SaveLabelImage([FromBody] LabelImageDto dto)
+        public async Task<IActionResult> SaveImage([FromBody] LabelImageDto dto)
         {
-            await _galliaService.SaveLabelImageAsync(dto.GalliaId, dto.Base64Image);
-            return Ok(new { message = "Image saved" });
+            try
+            {
+                // Validate input
+                if (dto == null)
+                {
+                    return BadRequest(new { message = "Request body cannot be empty" });
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Base64Image))
+                {
+                    return BadRequest(new { message = "Base64 image data cannot be empty" });
+                }
+
+                // Clean base64 prefix
+                string cleanBase64;
+                try
+                {
+                    cleanBase64 = CleanBase64String(dto.Base64Image);
+
+                    // Test conversion to ensure it's valid base64
+                    var testBytes = Convert.FromBase64String(cleanBase64);
+                    if (testBytes.Length == 0)
+                    {
+                        return BadRequest(new { message = "Invalid image data (empty after conversion)" });
+                    }
+                }
+                catch (FormatException)
+                {
+                    return BadRequest(new { message = "Invalid base64 image format" });
+                }
+
+                // Save to database
+                await _galliaService.SaveLabelImageAsync(dto.GalliaId, cleanBase64);
+
+                // Save to disk if path provided
+                bool savedToDisk = false;
+                string diskError = null;
+                if (!string.IsNullOrWhiteSpace(dto.SavePath))
+                {
+                    try
+                    {
+                        var folderPath = dto.SavePath.Trim();
+
+                        // Remove any surrounding quotes
+                        folderPath = folderPath.Trim('"');
+
+                        // Create directory if needed
+                        if (!System.IO.Directory.Exists(folderPath))
+                        {
+                            System.IO.Directory.CreateDirectory(folderPath);
+                        }
+
+                        var fileName = $"Gallia_{dto.GalliaId}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+                        var filePath = Path.Combine(folderPath, fileName);
+
+                        // Explicitly use System.IO.File to avoid ambiguity
+                        await System.IO.File.WriteAllBytesAsync(filePath, Convert.FromBase64String(cleanBase64));
+                        savedToDisk = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        diskError = ex.Message;
+                        _logger.LogError(ex, "Failed to save image to disk at path: {Path}", dto.SavePath);
+                    }
+                }
+
+                return Ok(new
+                {
+                    message = "Image saved successfully",
+                    savedToDatabase = true,
+                    savedToDisk = savedToDisk,
+                    diskError = diskError
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving Gallia image");
+                return StatusCode(500, new
+                {
+                    message = "Internal server error",
+                    details = ex.Message
+                });
+            }
+        }
+
+        private string CleanBase64String(string base64Input)
+        {
+            if (base64Input.StartsWith("data:image"))
+            {
+                var commaIndex = base64Input.IndexOf(',');
+                if (commaIndex >= 0)
+                {
+                    return base64Input[(commaIndex + 1)..];
+                }
+            }
+            return base64Input;
         }
     }
 }
