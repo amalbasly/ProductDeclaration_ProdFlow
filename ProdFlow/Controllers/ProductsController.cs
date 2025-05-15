@@ -1,16 +1,21 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ProdFlow.DTOs;
 using ProdFlow.Services.Interfaces;
+using ProdFlow.Data;
+using Microsoft.EntityFrameworkCore;
+using ProdFlow.Models.Entities;
 
 [ApiController]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
+    private readonly AppDbContext _context;
 
-    public ProductsController(IProductService productService)
+    public ProductsController(IProductService productService, AppDbContext context)
     {
         _productService = productService;
+        _context = context;
     }
 
     [HttpGet("GetOptions")]
@@ -43,15 +48,33 @@ public class ProductsController : ControllerBase
         [FromForm(Name = "Créé par")] string createur = null,
         [FromForm(Name = "Date Création")] DateTime? dateCreation = null,
         [FromForm(Name = "Tolerance")] string tolerance = null,
-        [FromForm(Name = "Flashable")] byte? flashable = null)
+        [FromForm(Name = "Flashable")] byte? flashable = null,
+        [FromForm(Name = "GalliaName")] string galliaName = null)
     {
+        int? galliaId = null;
+        if (!string.IsNullOrWhiteSpace(galliaName))
+        {
+            var gallia = await _context.Gallias
+                .FirstOrDefaultAsync(g => g.LabelName == "Gallia" && g.GalliaName == galliaName.Trim());
+            if (gallia == null)
+            {
+                return BadRequest(new
+                {
+                    Result = "Error",
+                    Message = $"GalliaName '{galliaName}' with LabelName 'Gallia' not found",
+                    ProductCode = codeProduit?.Trim()
+                });
+            }
+            galliaId = gallia.GalliaId;
+        }
+
         var dto = new ProduitSerialiséDto
         {
-            LpNum = ligne.Trim(),
-            FpCod = famille.Trim(),
-            SpCod = sousFamille.Trim(),
-            PtNum = codeProduit.Trim(),
-            PtLib = libelle.Trim(),
+            LpNum = ligne?.Trim(),
+            FpCod = famille?.Trim(),
+            SpCod = sousFamille?.Trim(),
+            PtNum = codeProduit?.Trim(),
+            PtLib = libelle?.Trim(),
             IsSerialized = isSerialized,
             TpCod = type?.Trim(),
             PtLib2 = libelle2?.Trim(),
@@ -61,7 +84,8 @@ public class ProductsController : ControllerBase
             PtCreateur = createur?.Trim(),
             PtDcreat = dateCreation,
             PtSpecifT15 = tolerance?.Trim(),
-            PtFlasher = flashable
+            PtFlasher = flashable,
+            GalliaId = galliaId
         };
 
         var result = await _productService.CreateProductAsync(dto);
@@ -96,27 +120,47 @@ public class ProductsController : ControllerBase
             Products = products
         });
     }
+
     [HttpPut("UpdateProduct")]
     public async Task<IActionResult> UpdateProduct(
-    [FromForm(Name = "Code Produit")] string codeProduit,
-    [FromForm(Name = "Libellé")] string libelle,
-    [FromForm(Name = "Serialisé")] bool isSerialized,
-    [FromForm(Name = "Ligne")] string ligne = null,
-    [FromForm(Name = "Famille")] string famille = null,
-    [FromForm(Name = "Sous-Famille")] string sousFamille = null,
-    [FromForm(Name = "Type")] string type = null,
-    [FromForm(Name = "Libellé 2")] string libelle2 = null,
-    [FromForm(Name = "Statut")] string statut = null,
-    [FromForm(Name = "Code Client (C264)")] string codeProduitClientC264 = null,
-    [FromForm(Name = "Poids (kg)")] float? poids = null,
-    [FromForm(Name = "Créé par")] string createur = null,
-    [FromForm(Name = "Tolerance")] string tolerance = null,
-    [FromForm(Name = "Flashable")] byte? flashable = null)
+        [FromForm(Name = "Code Produit")] string codeProduit,
+        [FromForm(Name = "Libellé")] string libelle,
+        [FromForm(Name = "Serialisé")] bool isSerialized,
+        [FromForm(Name = "Ligne")] string ligne = null,
+        [FromForm(Name = "Famille")] string famille = null,
+        [FromForm(Name = "Sous-Famille")] string sousFamille = null,
+        [FromForm(Name = "Type")] string type = null,
+        [FromForm(Name = "Libellé 2")] string libelle2 = null,
+        [FromForm(Name = "Statut")] string statut = null,
+        [FromForm(Name = "Code Client (C264)")] string codeProduitClientC264 = null,
+        [FromForm(Name = "Poids (kg)")] float? poids = null,
+        [FromForm(Name = "Créé par")] string createur = null,
+        [FromForm(Name = "Date Création")] DateTime? dateCreation = null,
+        [FromForm(Name = "Tolerance")] string tolerance = null,
+        [FromForm(Name = "Flashable")] byte? flashable = null,
+        [FromForm(Name = "GalliaName")] string galliaName = null)
     {
+        int? galliaId = null;
+        if (!string.IsNullOrWhiteSpace(galliaName))
+        {
+            var gallia = await _context.Gallias
+                .FirstOrDefaultAsync(g => g.LabelName == "Gallia" && g.GalliaName == galliaName.Trim());
+            if (gallia == null)
+            {
+                return BadRequest(new
+                {
+                    Result = "Error",
+                    Message = $"GalliaName '{galliaName}' with LabelName 'Gallia' not found",
+                    ProductCode = codeProduit?.Trim()
+                });
+            }
+            galliaId = gallia.GalliaId;
+        }
+
         var dto = new ProduitSerialiséDto
         {
-            PtNum = codeProduit.Trim(),
-            PtLib = libelle.Trim(),
+            PtNum = codeProduit?.Trim(),
+            PtLib = libelle?.Trim(),
             IsSerialized = isSerialized,
             LpNum = ligne?.Trim(),
             FpCod = famille?.Trim(),
@@ -127,8 +171,10 @@ public class ProductsController : ControllerBase
             PtSpecifT14 = codeProduitClientC264?.Trim(),
             PtPoids = poids,
             PtCreateur = createur?.Trim(),
+            PtDcreat = dateCreation,
             PtSpecifT15 = tolerance?.Trim(),
-            PtFlasher = flashable
+            PtFlasher = flashable,
+            GalliaId = galliaId
         };
 
         var result = await _productService.UpdateProductAsync(dto);

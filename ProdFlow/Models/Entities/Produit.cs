@@ -20,6 +20,7 @@ namespace ProdFlow.Models.Entities
         [Required]
         public string PtLib { get; set; }
 
+
         [Column("pt_lib2")]
         [StringLength(96)]
         public string PtLib2 { get; set; }
@@ -408,5 +409,12 @@ namespace ProdFlow.Models.Entities
 
         [Column("pt_specifT17")]
         public decimal? PtSpecifT17 { get; set; }
+
+        [Column("GalliaId")]
+        public int? GalliaId { get; set; }
+
+        [ForeignKey("GalliaId")]
+        public Gallia Gallia { get; set; }
+
     }
 }

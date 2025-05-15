@@ -82,6 +82,8 @@ namespace ProdFlow.DTOs
 
         [Display(Name = "Produit Serialisé")]
         public bool IsSerialized { get; set; } = false;
+        public int? GalliaId { get; set; }
+        public string GalliaName { get; set; }
 
     }
 }

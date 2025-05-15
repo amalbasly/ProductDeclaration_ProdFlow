@@ -21,11 +21,10 @@ namespace ProdFlow.Data
 
         // Gallia-related
         public DbSet<Gallia> Gallias { get; set; }
-        public DbSet<ProductGallia> ProductGallias { get; set; }
 
         // For stored procedure results
         public DbSet<StoredProcedureResult> StoredProcedureResults { get; set; }
-        public virtual DbSet<ProductGalliaAssociationDto> ProductGalliaAssociations { get; set; }
+       
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -85,43 +84,10 @@ namespace ProdFlow.Data
                 entity.Property(g => g.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 
-            // ProductGallia config
-            modelBuilder.Entity<ProductGallia>(entity =>
-            {
-                entity.HasKey(pg => pg.ProductGalliaId);
-
-                entity.HasOne(pg => pg.Gallia)
-                    .WithMany()
-                    .HasForeignKey(pg => pg.GalliaId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(pg => pg.Produit)
-                    .WithMany()
-                    .HasForeignKey(pg => pg.Pt_Num)
-                    .HasPrincipalKey(p => p.PtNum)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.Property(pg => pg.Pt_Num).HasMaxLength(18);
-                entity.Property(pg => pg.ProductName).HasMaxLength(100);
-                entity.Property(pg => pg.SupplierReference).HasMaxLength(100);
-                entity.Property(pg => pg.LabelNumber).HasMaxLength(100);
-                entity.Property(pg => pg.Description).HasMaxLength(255);
-                entity.Property(pg => pg.SupplierName).HasMaxLength(100);
-                entity.Property(pg => pg.CreatedAt).HasDefaultValueSql("GETDATE()");
-            });
+            
 
             // Stored procedure DTO config
-            modelBuilder.Entity<ProductGalliaAssociationDto>(entity =>
-            {
-                entity.HasNoKey();
-                entity.Property(e => e.Pt_Num).HasMaxLength(18);
-                entity.Property(e => e.ProductName).HasMaxLength(100);
-                entity.Property(e => e.SupplierReference).HasMaxLength(100);
-                entity.Property(e => e.LabelNumber).HasMaxLength(100);
-                entity.Property(e => e.Description).HasMaxLength(255);
-                entity.Property(e => e.SupplierName).HasMaxLength(100);
-                entity.Property(e => e.LIB1).HasMaxLength(100);
-            });
+            
             modelBuilder.Entity<ClientReferenceData>(entity =>
             {
                 entity.HasKey(e => new { e.ClientReference, e.PtNum }); // Composite key if needed

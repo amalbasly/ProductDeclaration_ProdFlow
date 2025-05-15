@@ -64,16 +64,15 @@ namespace ProdFlow.Services
                     CommandType = CommandType.StoredProcedure
                 };
 
-                // Fixed null coalescing issue by using explicit null checks
                 command.Parameters.Add(new SqlParameter("@pt_num", SqlDbType.VarChar, 18)
                 {
                     Value = dto.PtNum != null ? (object)dto.PtNum : DBNull.Value
                 });
-                command.Parameters.Add(new SqlParameter("@pt_lib", SqlDbType.VarChar, 96)
+                command.Parameters.Add(new SqlParameter("@pt_lib", SqlDbType.NVarChar, 96)
                 {
                     Value = dto.PtLib != null ? (object)dto.PtLib : DBNull.Value
                 });
-                command.Parameters.Add(new SqlParameter("@pt_lib2", SqlDbType.VarChar, 96)
+                command.Parameters.Add(new SqlParameter("@pt_lib2", SqlDbType.NVarChar, 96)
                 {
                     Value = dto.PtLib2 != null ? (object)dto.PtLib2 : DBNull.Value
                 });
@@ -124,6 +123,10 @@ namespace ProdFlow.Services
                 command.Parameters.Add(new SqlParameter("@is_serialized", SqlDbType.Bit)
                 {
                     Value = dto.IsSerialized
+                });
+                command.Parameters.Add(new SqlParameter("@GalliaId", SqlDbType.Int)
+                {
+                    Value = dto.GalliaId.HasValue ? (object)dto.GalliaId.Value : DBNull.Value
                 });
 
                 using var reader = await command.ExecuteReaderAsync();
@@ -231,12 +234,21 @@ namespace ProdFlow.Services
                     {
                         PtNum = SafeGetString(reader, "CodeProduit"),
                         PtLib = SafeGetString(reader, "Libellé"),
+                        PtLib2 = SafeGetString(reader, "Libellé2"),
+                        LpNum = SafeGetString(reader, "Ligne"),
                         FpCod = SafeGetString(reader, "Famille"),
                         SpCod = SafeGetString(reader, "SousFamille"),
+                        TpCod = SafeGetString(reader, "Type"),
                         SpId = SafeGetString(reader, "Status"),
-                        IsSerialized = SafeGetBoolean(reader, "is_serialized"),
+                        PtSpecifT14 = SafeGetString(reader, "CodeProduitClientC264"),
                         PtPoids = SafeGetDouble(reader, "Poids"),
-                        PtDcreat = SafeGetDateTime(reader, "DateCreation")
+                        PtCreateur = SafeGetString(reader, "Createur"),
+                        IsSerialized = SafeGetBoolean(reader, "is_serialized"),
+                        PtDcreat = SafeGetDateTime(reader, "DateCreation"),
+                        PtSpecifT15 = SafeGetString(reader, "Tolérances"),
+                        PtFlasher = reader.IsDBNull(reader.GetOrdinal("Flashable")) ? null : (byte?)reader.GetByte(reader.GetOrdinal("Flashable")),
+                        GalliaId = reader.IsDBNull(reader.GetOrdinal("GalliaId")) ? null : reader.GetInt32(reader.GetOrdinal("GalliaId")),
+                        GalliaName = SafeGetString(reader, "GalliaName")
                     });
                 }
 
@@ -263,29 +275,6 @@ namespace ProdFlow.Services
             }
         }
 
-        private static string SafeGetString(SqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
-        }
-
-        private static bool SafeGetBoolean(SqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
-        }
-
-        private static double? SafeGetDouble(SqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            return reader.IsDBNull(ordinal) ? null : reader.GetDouble(ordinal);
-        }
-
-        private static DateTime? SafeGetDateTime(SqlDataReader reader, string columnName)
-        {
-            var ordinal = reader.GetOrdinal(columnName);
-            return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
-        }
         public async Task<ProductResult> UpdateProductAsync(ProduitSerialiséDto dto)
         {
             if (string.IsNullOrEmpty(dto.PtNum))
@@ -308,21 +297,66 @@ namespace ProdFlow.Services
                     CommandType = CommandType.StoredProcedure
                 };
 
-                // Add all parameters with null checks
-                command.Parameters.Add(new SqlParameter("@pt_num", SqlDbType.VarChar, 18) { Value = dto.PtNum });
-                command.Parameters.Add(new SqlParameter("@pt_lib", SqlDbType.NVarChar, 96) { Value = dto.PtLib ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_lib2", SqlDbType.NVarChar, 96) { Value = dto.PtLib2 ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@lp_num", SqlDbType.VarChar, 2) { Value = dto.LpNum ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@fp_cod", SqlDbType.VarChar, 10) { Value = dto.FpCod ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@sp_cod", SqlDbType.VarChar, 25) { Value = dto.SpCod ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@tp_cod", SqlDbType.VarChar, 10) { Value = dto.TpCod ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@sp_Id", SqlDbType.VarChar, 6) { Value = dto.SpId ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_specifT14", SqlDbType.VarChar, 50) { Value = dto.PtSpecifT14 ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_poids", SqlDbType.Float) { Value = dto.PtPoids ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_createur", SqlDbType.VarChar, 12) { Value = dto.PtCreateur ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_specifT15", SqlDbType.VarChar, 50) { Value = dto.PtSpecifT15 ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@pt_flasher", SqlDbType.TinyInt) { Value = dto.PtFlasher ?? (object)DBNull.Value });
-                command.Parameters.Add(new SqlParameter("@is_serialized", SqlDbType.Bit) { Value = dto.IsSerialized });
+                command.Parameters.Add(new SqlParameter("@pt_num", SqlDbType.VarChar, 18)
+                {
+                    Value = dto.PtNum != null ? (object)dto.PtNum : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_lib", SqlDbType.NVarChar, 96)
+                {
+                    Value = dto.PtLib != null ? (object)dto.PtLib : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_lib2", SqlDbType.NVarChar, 96)
+                {
+                    Value = dto.PtLib2 != null ? (object)dto.PtLib2 : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@lp_num", SqlDbType.VarChar, 2)
+                {
+                    Value = dto.LpNum != null ? (object)dto.LpNum : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@fp_cod", SqlDbType.VarChar, 10)
+                {
+                    Value = dto.FpCod != null ? (object)dto.FpCod : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@sp_cod", SqlDbType.VarChar, 25)
+                {
+                    Value = dto.SpCod != null ? (object)dto.SpCod : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@tp_cod", SqlDbType.VarChar, 10)
+                {
+                    Value = dto.TpCod != null ? (object)dto.TpCod : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@sp_Id", SqlDbType.VarChar, 6)
+                {
+                    Value = dto.SpId != null ? (object)dto.SpId : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_specifT14", SqlDbType.VarChar, 50)
+                {
+                    Value = dto.PtSpecifT14 != null ? (object)dto.PtSpecifT14 : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_poids", SqlDbType.Float)
+                {
+                    Value = dto.PtPoids.HasValue ? (object)dto.PtPoids.Value : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_createur", SqlDbType.VarChar, 12)
+                {
+                    Value = dto.PtCreateur != null ? (object)dto.PtCreateur : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_specifT15", SqlDbType.VarChar, 50)
+                {
+                    Value = dto.PtSpecifT15 != null ? (object)dto.PtSpecifT15 : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@pt_flasher", SqlDbType.TinyInt)
+                {
+                    Value = dto.PtFlasher.HasValue ? (object)dto.PtFlasher.Value : DBNull.Value
+                });
+                command.Parameters.Add(new SqlParameter("@is_serialized", SqlDbType.Bit)
+                {
+                    Value = dto.IsSerialized
+                });
+                command.Parameters.Add(new SqlParameter("@GalliaId", SqlDbType.Int)
+                {
+                    Value = dto.GalliaId.HasValue ? (object)dto.GalliaId.Value : DBNull.Value
+                });
 
                 using var reader = await command.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -351,6 +385,30 @@ namespace ProdFlow.Services
                     ProductCode = dto.PtNum
                 };
             }
+        }
+
+        private static string SafeGetString(SqlDataReader reader, string columnName)
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+        }
+
+        private static bool SafeGetBoolean(SqlDataReader reader, string columnName)
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
+        }
+
+        private static double? SafeGetDouble(SqlDataReader reader, string columnName)
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return reader.IsDBNull(ordinal) ? null : reader.GetDouble(ordinal);
+        }
+
+        private static DateTime? SafeGetDateTime(SqlDataReader reader, string columnName)
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
         }
     }
 }

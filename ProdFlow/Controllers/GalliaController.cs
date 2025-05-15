@@ -256,5 +256,11 @@ namespace ProdFlow.Controllers
             }
             return base64Input;
         }
+        [HttpGet("names")]
+    public async Task<IActionResult> GetGalliaNames()
+    {
+        var names = await _galliaService.GetGalliaNamesAsync();
+        return Ok(names);
+    }
     }
 }
