@@ -21,10 +21,13 @@ namespace ProdFlow.Data
 
         // Gallia-related
         public DbSet<Gallia> Gallias { get; set; }
+        public DbSet<FlanDecoupe> FlanDecoupes { get; set; }
+        public DbSet<FlanPartie> FlanParties { get; set; }
+
 
         // For stored procedure results
         public DbSet<StoredProcedureResult> StoredProcedureResults { get; set; }
-       
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -84,10 +87,10 @@ namespace ProdFlow.Data
                 entity.Property(g => g.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 
-            
+
 
             // Stored procedure DTO config
-            
+
             modelBuilder.Entity<ClientReferenceData>(entity =>
             {
                 entity.HasKey(e => new { e.ClientReference, e.PtNum }); // Composite key if needed
@@ -123,6 +126,22 @@ namespace ProdFlow.Data
                       .HasForeignKey(gi => gi.GalliaId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+            modelBuilder.Entity<FlanDecoupe>()
+         .HasMany(f => f.Parts)
+         .WithOne(p => p.FlanDecoupe)
+         .HasForeignKey(p => p.FlanDecoupeId)
+         .OnDelete(DeleteBehavior.Cascade);
+
+            // FlanPartie configuration
+            modelBuilder.Entity<FlanPartie>()
+                .HasKey(p => p.CodePartie);
+
+            modelBuilder.Entity<FlanPartie>()
+                .HasOne(p => p.Produit)
+                .WithMany()
+                .HasForeignKey(p => p.pt_numOriginal);
         }
     }
 }
+
+    

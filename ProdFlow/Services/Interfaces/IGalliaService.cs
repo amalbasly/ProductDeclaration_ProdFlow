@@ -13,6 +13,6 @@ namespace ProdFlow.Services.Interfaces
         Task UpdateGalliaAsync(UpdateGalliaDto updateDto);
         Task<bool> DeleteGalliaAsync(int id);
         Task SaveLabelImageAsync(int galliaId, string base64Image);
-        Task<List<string>> GetGalliaNamesAsync();
+        Task<List<string>> GetGalliaNamesAsync(string labelType);
     }
 }

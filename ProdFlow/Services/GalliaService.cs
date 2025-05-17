@@ -289,9 +289,11 @@ namespace ProdFlow.Services
                 }
             }
         }
-        public async Task<List<string>> GetGalliaNamesAsync()
+        public async Task<List<string>> GetGalliaNamesAsync(string labelType)
         {
-            return await _context.Database.SqlQueryRaw<string>("EXEC dbo.GetGalliaNames")
+            return await _context.Database.SqlQueryRaw<string>(
+                "EXEC dbo.GetGalliaNames @LabelType",
+                new SqlParameter("@LabelType", labelType))
                 .ToListAsync();
         }
     }
