@@ -266,8 +266,19 @@ namespace ProdFlow.Services
                 {
                     command.CommandType = CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("@GalliaId", id);
-                    var rowsAffected = await command.ExecuteNonQueryAsync();
-                    return rowsAffected > 0;
+
+                    // Add the @Deleted output parameter
+                    var deletedParam = new SqlParameter("@Deleted", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    command.Parameters.Add(deletedParam);
+
+                    await command.ExecuteNonQueryAsync();
+
+                    // Check the value of the @Deleted output parameter
+                    int deleted = (int)deletedParam.Value;
+                    return deleted == 1;
                 }
             }
         }

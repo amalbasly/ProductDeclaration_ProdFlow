@@ -34,6 +34,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IGalliaService, GalliaService>();
 builder.Services.AddScoped<IClientReferenceService, ClientReferenceService>();
 builder.Services.AddScoped<IFlanDecoupeService, FlanDecoupeService>();
+builder.Services.AddScoped<IAssemblageService, AssemblageService>();
 
 //builder.Services.AddScoped<IProfileService, ProfileService>();
 // Add other service registrations here as needed
