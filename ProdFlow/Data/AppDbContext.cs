@@ -30,11 +30,10 @@ namespace ProdFlow.Data
 
         // For stored procedure results
         public DbSet<StoredProcedureResult> StoredProcedureResults { get; set; }
+        public DbSet<VerificationToken> VerificationTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Existing configurations...
-
             // Employee config
             modelBuilder.Entity<StoredProcedureResult>().HasNoKey().ToView(null);
 
@@ -145,8 +144,7 @@ namespace ProdFlow.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Existing DTO and other configurations...
-
+            // ClientReferenceData config
             modelBuilder.Entity<ClientReferenceData>(entity =>
             {
                 entity.HasKey(e => new { e.ClientReference, e.PtNum });
@@ -164,32 +162,64 @@ namespace ProdFlow.Data
                     .HasMaxLength(255);
 
                 entity.Property(e => e.PtNum)
-                    .HasMaxLength(18)
-                    .HasColumnName("pt_num");
+                    .HasColumnName("pt_num")
+                    .HasMaxLength(18);
             });
 
+            // GalliaImage config
             modelBuilder.Entity<GalliaImage>(entity =>
             {
                 entity.HasKey(gi => gi.GalliaImageId);
 
                 entity.Property(gi => gi.CreatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("GETUTCDATE()");
 
                 entity.Property(gi => gi.UpdatedAt)
-                      .IsRequired(false);
+                    .IsRequired(false);
 
                 entity.HasOne(gi => gi.Gallia)
-                      .WithMany(g => g.Images)
-                      .HasForeignKey(gi => gi.GalliaId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                    .WithMany(g => g.Images)
+                    .HasForeignKey(gi => gi.GalliaId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // VerificationToken config
+            modelBuilder.Entity<VerificationToken>(entity =>
+            {
+                entity.HasKey(vt => vt.Id);
+
+                entity.Property(vt => vt.PtNum)
+                    .HasColumnName("pt_num")
+                    .HasMaxLength(18);
+
+                entity.Property(vt => vt.Token)
+                    .HasMaxLength(100); // Matches StringLength in entity
+
+                entity.Property(vt => vt.TraceabilityManagerId)
+                    .HasMaxLength(50);
+
+                entity.Property(vt => vt.ExpiryDate)
+                    .IsRequired();
+
+                entity.Property(vt => vt.CreatedDate)
+                    .HasColumnName("CreatedDate")
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne<Produit>()
+                    .WithMany()
+                    .HasForeignKey(vt => vt.PtNum)
+                    .HasPrincipalKey(p => p.PtNum)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // FlanDecoupe config
             modelBuilder.Entity<FlanDecoupe>()
                 .HasMany(f => f.Parts)
                 .WithOne(p => p.FlanDecoupe)
                 .HasForeignKey(p => p.FlanDecoupeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // FlanPartie config
             modelBuilder.Entity<FlanPartie>()
                 .HasKey(p => p.CodePartie);
 

@@ -20,7 +20,6 @@ namespace ProdFlow.Models.Entities
         [Required]
         public string PtLib { get; set; }
 
-
         [Column("pt_lib2")]
         [StringLength(96)]
         public string PtLib2 { get; set; }
@@ -413,8 +412,14 @@ namespace ProdFlow.Models.Entities
         [Column("GalliaId")]
         public int? GalliaId { get; set; }
 
+        [Column("pt_verification_deadline")]
+        public DateTime? PtVerificationDeadline { get; set; } // Added for verification deadline
+
         [ForeignKey("GalliaId")]
         public Gallia Gallia { get; set; }
 
+        public List<Justification> Justifications { get; set; }
+        public List<SynoptiqueProd> SynoptiqueProds { get; set; }
+        public ClientReferenceData ClientReferenceData { get; set; }
     }
 }

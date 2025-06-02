@@ -1,5 +1,4 @@
-﻿// Controllers/JustificationController.cs
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ProdFlow.DTOs;
 using ProdFlow.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
@@ -65,6 +64,39 @@ namespace ProdFlow.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while submitting justification");
+                return StatusCode(500, new
+                {
+                    Error = "Server error",
+                    Details = ex.Message
+                });
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetJustifications(
+            [FromQuery] string productCode = null,
+            [FromQuery] string status = null,
+            [FromQuery] string submittedBy = null)
+        {
+            try
+            {
+                var justifications = await _justificationService.GetJustificationsAsync(
+                    productCode, status, submittedBy);
+
+                return Ok(justifications);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "Database error while retrieving justifications");
+                return StatusCode(500, new
+                {
+                    Error = "Database error",
+                    Details = ex.Message,
+                    SqlErrorNumber = ex.Number
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while retrieving justifications");
                 return StatusCode(500, new
                 {
                     Error = "Server error",

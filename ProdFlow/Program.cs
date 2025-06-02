@@ -1,13 +1,17 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ProdFlow.Data;
 using ProdFlow.Services;
-using ProdFlow.Services.Interfaces; 
+using ProdFlow.Services.Interfaces;
+using Hangfire;
+using Hangfire.SqlServer; // Changed to specific storage
+using Microsoft.AspNetCore.Authentication.JwtBearer; // Added for JWT
+using Microsoft.IdentityModel.Tokens;
 using System;
+using System.Text;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +20,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register your single DbContext
+// Register DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -25,7 +29,36 @@ builder.Services.AddTransient(provider =>
     new Microsoft.Data.SqlClient.SqlConnection(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register your services
+// Register Hangfire
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseDefaultTypeSerializer()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfireServer();
+
+// Register JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    };
+});
+
+// Register services
 builder.Services.AddScoped<IEmployeeValidationService, EmployeeValidationService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IJustificationService, JustificationService>();
@@ -36,10 +69,6 @@ builder.Services.AddScoped<IClientReferenceService, ClientReferenceService>();
 builder.Services.AddScoped<IFlanDecoupeService, FlanDecoupeService>();
 builder.Services.AddScoped<IAssemblageService, AssemblageService>();
 
-//builder.Services.AddScoped<IProfileService, ProfileService>();
-// Add other service registrations here as needed
-// builder.Services.AddScoped<IMyOtherService, MyOtherService>();
-
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -47,14 +76,17 @@ builder.Services.AddCors(options =>
         policyBuilder =>
         {
             policyBuilder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
+                         .AllowAnyMethod()
+                         .AllowAnyHeader();
         });
 });
 
 // Add logging
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+builder.Services.AddLogging(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+});
 
 var app = builder.Build();
 
@@ -66,8 +98,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAllOrigins");
+app.UseAuthentication(); // Added before UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
+app.UseHangfireDashboard();
 
 // Verify database connection on startup
 try
